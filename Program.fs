@@ -14,6 +14,27 @@ let legend =
       (']', "if the pointed byte is not 0 then jump to the instruction after the corresponding [") ]
     |> Map.ofList
 
+// Build bidirectional map: '[' positions -> ']' positions and vice versa
+// • jumps: map being built
+// • stack: list of unmatched `[` positions
+// • '[' don't know where to jump yet, so push position i to stack
+// • ']' pop stack to get matching `[` position
+// • '_' non-bracket: ignore, pass state through unchanged.
+let buildJumpTable (input: char[]) =
+    input
+    |> Array.indexed
+    |> Array.fold
+        (fun (jumps, stack) (i, c) ->
+            match c with
+            | '[' -> (jumps, i :: stack)
+            | ']' ->
+                match stack with
+                | openPos :: rest -> (jumps |> Map.add openPos i |> Map.add i openPos, rest)
+                | [] -> (jumps, stack)
+            | _ -> (jumps, stack))
+        (Map.empty, []) // initial state
+    |> fst
+
 let interpret (inputData: string) =
     let memorySize = 30_000
     let memory = Array.zeroCreate<byte> memorySize // BF memory (30_000 cells)
@@ -21,9 +42,12 @@ let interpret (inputData: string) =
     let mutable inputPointer = 0
     let output = System.Text.StringBuilder()
 
+    let jumpTable = inputData.ToCharArray() |> buildJumpTable
     let newlineByte = 10uy
     let inputDataLength = inputData.Length
     let debug = false
+
+    printfn $"[DEBUG] jumpTable=%A{jumpTable}"
 
     while inputPointer < inputDataLength do
         if debug then
@@ -41,32 +65,12 @@ let interpret (inputData: string) =
             match memory.[pointer] with
             | x when (x >= 32uy && x <= 126uy) || x = newlineByte -> output.Append(x |> char) |> ignore
             | x -> eprintfn $"[WARNING] Non-printable character at pointer %d{pointer}: %d{x}"
-        | ',' -> // NOTE: this branch is untested
+        | ',' -> // WARNING: this branch is untested
             if inputPointer < inputDataLength then
                 memory.[pointer] <- inputData.[inputPointer] |> int |> byte
                 inputPointer <- inputPointer + 1
-        | '[' ->
-            if memory.[pointer] = 0uy then
-                let mutable openBrackets = 1
-
-                while openBrackets > 0 && inputPointer < inputDataLength do
-                    inputPointer <- inputPointer + 1
-
-                    match inputData.[inputPointer] with
-                    | '[' -> openBrackets <- openBrackets + 1
-                    | ']' -> openBrackets <- openBrackets - 1
-                    | _ -> ()
-        | ']' ->
-            if memory.[pointer] <> 0uy then
-                let mutable closeBrackets = 1
-
-                while closeBrackets > 0 && inputPointer > 0 do
-                    inputPointer <- inputPointer - 1
-
-                    match inputData.[inputPointer] with
-                    | ']' -> closeBrackets <- closeBrackets + 1
-                    | '[' -> closeBrackets <- closeBrackets - 1
-                    | _ -> ()
+        | '[' when memory.[pointer] = 0uy -> inputPointer <- jumpTable.[inputPointer]
+        | ']' when memory.[pointer] <> 0uy -> inputPointer <- jumpTable.[inputPointer]
         | _ -> () // ignore non-BF characters
 
         inputPointer <- inputPointer + 1
@@ -78,7 +82,7 @@ let main _argv =
     let testCases =
         seq {
             ("++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.",
-             "Hello, World!\n")
+             "Hello World!\n")
 
             ("-[--->+<]>-.[---->+++++<]>-.+.++++++++++.+[---->+<]>+++.-[--->++<]>-.++++++++++.+[---->+<]>+++.[-->+++++++<]>.++.-------------.[--->+<]>---..+++++.-[---->+<]>++.+[->+++<]>.++++++++++++..---.[-->+<]>--------.",
              "This is pretty cool.") // Source: https://copy.sh/brainfuck/text.html
@@ -87,17 +91,22 @@ let main _argv =
     testCases
     |> Seq.iter (fun (input, expected) ->
         let actual = input |> interpret
-        printfn $"[DEBUG]\n    input=%A{input}\n    expected=%A{expected}\n    actual=%A{actual}")
+        printfn $"[DEBUG]\n    input:    %A{input}\n    actual:   %A{actual}\n    expected: %A{expected}\n")
 
     0
 
+// [DEBUG] jumpTable=map [(8, 48); (14, 33); (33, 14); (43, 45); (45, 43); (48, 8)]
 // [DEBUG]
-//     input="++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++."
-//     expected="Hello, World!
+//     input:    "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++."
+//     actual:   "Hello World!
 // "
-//     actual="Hello World!
+//     expected: "Hello World!
 // "
+//
+// [DEBUG] jumpTable=map
+//   [(1, 8); (8, 1); (12, 24); (24, 12); (42, 50); (50, 42); (57, 65); (65, 57);
+//    (81, 89); ...]
 // [DEBUG]
-//     input="-[--->+<]>-.[---->+++++<]>-.+.++++++++++.+[---->+<]>+++.-[--->++<]>-.++++++++++.+[---->+<]>+++.[-->+++++++<]>.++.-------------.[--->+<]>---..+++++.-[---->+<]>++.+[->+++<]>.++++++++++++..---.[-->+<]>--------."
-//     expected="This is pretty cool."
-//     actual="This is pretty cool."
+//     input:    "-[--->+<]>-.[---->+++++<]>-.+.++++++++++.+[---->+<]>+++.-[--->++<]>-.++++++++++.+[---->+<]>+++.[-->+++++++<]>.++.-------------.[--->+<]>---..+++++.-[---->+<]>++.+[->+++<]>.++++++++++++..---.[-->+<]>--------."
+//     actual:   "This is pretty cool."
+//     expected: "This is pretty cool."
