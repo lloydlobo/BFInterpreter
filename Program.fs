@@ -48,37 +48,37 @@ let interpret (inputData: string) (userInput: string) =
 
 [<EntryPoint>]
 let main _argv =
-    let testCases =
-        seq {
-            ("++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.",
-             "",
-             "Hello World!\n")
+    seq {
+        ("++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.",
+         "",
+         "Hello World!\n")
 
-            ("-[--->+<]>-.[---->+++++<]>-.+.++++++++++.+[---->+<]>+++.-[--->++<]>-.++++++++++.+[---->+<]>+++.[-->+++++++<]>.++.-------------.[--->+<]>---..+++++.-[---->+<]>++.+[->+++<]>.++++++++++++..---.[-->+<]>--------.",
-             "",
-             "This is pretty cool.") // source: https://copy.sh/brainfuck/text.html
+        ("-[--->+<]>-.[---->+++++<]>-.+.++++++++++.+[---->+<]>+++.-[--->++<]>-.++++++++++.+[---->+<]>+++.[-->+++++++<]>.++.-------------.[--->+<]>---..+++++.-[---->+<]>++.+[->+++<]>.++++++++++++..---.[-->+<]>--------.",
+         "",
+         "This is pretty cool.") // source: https://copy.sh/brainfuck/text.html
 
-            (",.", "A", "A") // echo input: read char and output it
-            (",>,.<.", "AB", "BA") // reverse two chars
-            (",>,[<+>-]<.", "12", "c") // add '1' (49) + '2' (50) = 99 = 'c'
-            (",>,[<+>-]<++++++++++++++++++++++++++++++++++++++++++++++++.", "\u0005\u0005", ":") // add 5 + 5 = 10, then add 48 to get '10' → ':' (ASCII 58)
-            (",>,[<+>-]<.", "A ", "a") // add 'A' (65) + space (32) = 97 = 'a'
-            ("+++++++++[>++++++++++<-]>--.", "", "X") // FIXME: simple loop: output 'X' five times (just outputs once)
-            ("+++++++++[>++++++++<-]>.+.+.+.", "", "HIJK") // output multiple chars
-        }
-
-    testCases
+        (",.", "A", "A") // echo input: read char and output it
+        (",>,.<.", "AB", "BA") // reverse two chars
+        (",>,[<+>-]<.", "12", "c") // add '1' (49) + '2' (50) = 99 = 'c'
+        (",>,[<+>-]<++++++++++++++++++++++++++++++++++++++++++++++++.", "\u0005\u0005", ":") // add 5 + 5 = 10, then add 48 to get '10' → ':' (ASCII 58)
+        (",>,[<+>-]<.", "A ", "a") // add 'A' (65) + space (32) = 97 = 'a'
+        ("+++++++++[>++++++++++<-]>--.", "", "X") // FIXME: simple loop: output 'X' five times (just outputs once)
+        ("+++++++++[>++++++++<-]>.+.+.+.", "", "HIJK") // output multiple chars
+    }
     |> Seq.iteri (fun i (inputData, userInput, expected) ->
         let actual = interpret inputData userInput
         let pass = if expected = actual then "✓" else "✗"
 
-        printfn
-            $"""[DEBUG]     test %d{i + 1}: {pass}
-            inputData:  %A{inputData}
-            userInput:  %A{userInput}
-            expected:   %A{expected}
-            actual:     %A{actual}
-            """)
+        if expected <> actual then
+            printfn
+                $"""Test %d{i + 1}: {pass}
+                inputData:  %A{inputData}
+                userInput:  %A{userInput}
+                expected:   %A{expected}
+                actual:     %A{actual}
+                """
+        else
+            printfn $"""Test %d{i + 1}: {pass}""")
 
     0
 
