@@ -3,7 +3,7 @@
 //     ">" "<" "+" "-" "." "," "[" "]"
 // Any other character is generally ignored by the interpreter.
 // Source: https://www.dcode.fr/brainfuck-language
-let legend =
+let operationMap =
     [ ('>', "increment the pointer position (+1)")
       ('<', "decrement the pointer position (-1)")
       ('+', "increment the byte in the memory cell where the pointer is located")
@@ -13,6 +13,12 @@ let legend =
       ('[', "if the pointed byte is 0 then jump to instruction after the corresponding ]")
       (']', "if the pointed byte is not 0 then jump to the instruction after the corresponding [") ]
     |> Map.ofList
+
+let debugFrame (inputData: string) inputPointer =
+    let location = $"[%03d{inputPointer}..%03d{inputData.Length}]"
+    let key = inputData.[inputPointer]
+    let value = operationMap |> Map.tryFind key |> Option.defaultValue "Unknown"
+    eprintfn $"""[DEBUG] %s{location} %c{key}: %s{value}"""
 
 // Build bidirectional map: '[' positions -> ']' positions and vice versa
 // • jumps: map being built
@@ -47,14 +53,12 @@ let interpret (inputData: string) =
     let inputDataLength = inputData.Length
     let debug = false
 
-    printfn $"[DEBUG] jumpTable=%A{jumpTable}"
+    if debug then
+        printfn $"[DEBUG] jumpTable=%A{jumpTable}"
 
     while inputPointer < inputDataLength do
         if debug then
-            let location = $"[%03d{inputPointer}..%03d{inputDataLength}]"
-            let key = inputData.[inputPointer]
-            let value = legend |> Map.tryFind key |> Option.defaultValue "Unknown"
-            eprintfn $"""[DEBUG] %s{location} %c{key}: %s{value}"""
+            inputPointer |> debugFrame inputData
 
         match inputData.[inputPointer] with
         | '>' -> pointer <- (pointer + 1) % memorySize
