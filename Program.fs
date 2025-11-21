@@ -2,14 +2,14 @@
 
 let inline wrapByte n = (n % 256 + 256) % 256 |> byte
 
-let buildJumpTable (input: char[]) = // Build bidirectional map: '[' positions -> ']' positions and vice versa
-    input
+let buildJumpTable (input: char[]) =
+    input // build bidirectional map: '[' positions -> ']' positions and vice versa
     |> Array.indexed
     |> Array.fold
         (fun (jumps, stack) (i, c) -> // jumps: map being built
             match c with // stack: list of unmatched `[` positions
-            | '[' -> (jumps, i :: stack) // Don't know where to jump yet, so push position i to stack
-            | ']' -> // Pop stack to get matching `[` position
+            | '[' -> (jumps, i :: stack) // don't know where to jump yet, so push position i to stack
+            | ']' -> // pop stack to get matching `[` position
                 match stack with
                 | openPos :: rest -> (jumps |> Map.add openPos i |> Map.add i openPos, rest)
                 | [] -> (jumps, stack)
@@ -81,59 +81,3 @@ let main _argv =
             printfn $"""Test %d{i + 1}: {pass}""")
 
     0
-
-// [DEBUG]     test 1: ✓
-//             inputData:  "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++."
-//             userInput:  ""
-//             expected:   "Hello World!
-// "
-//             actual:     "Hello World!
-// "
-//
-// [DEBUG]     test 2: ✓
-//             inputData:  "-[--->+<]>-.[---->+++++<]>-.+.++++++++++.+[---->+<]>+++.-[--->++<]>-.++++++++++.+[---->+<]>+++.[-->+++++++<]>.++.-------------.[--->+<]>---..+++++.-[---->+<]>++.+[->+++<]>.++++++++++++..---.[-->+<]>--------."
-//             userInput:  ""
-//             expected:   "This is pretty cool."
-//             actual:     "This is pretty cool."
-//
-// [DEBUG]     test 3: ✓
-//             inputData:  ",."
-//             userInput:  "A"
-//             expected:   "A"
-//             actual:     "A"
-//
-// [DEBUG]     test 4: ✓
-//             inputData:  ",>,.<."
-//             userInput:  "AB"
-//             expected:   "BA"
-//             actual:     "BA"
-//
-// [DEBUG]     test 5: ✓
-//             inputData:  ",>,[<+>-]<."
-//             userInput:  "12"
-//             expected:   "c"
-//             actual:     "c"
-//
-// [DEBUG]     test 6: ✓
-//             inputData:  ",>,[<+>-]<++++++++++++++++++++++++++++++++++++++++++++++++."
-//             userInput:  ""
-//             expected:   ":"
-//             actual:     ":"
-//
-// [DEBUG]     test 7: ✓
-//             inputData:  ",>,[<+>-]<."
-//             userInput:  "A "
-//             expected:   "a"
-//             actual:     "a"
-//
-// [DEBUG]     test 8: ✓
-//             inputData:  "+++++++++[>++++++++++<-]>--."
-//             userInput:  ""
-//             expected:   "X"
-//             actual:     "X"
-//
-// [DEBUG]     test 9: ✓
-//             inputData:  "+++++++++[>++++++++<-]>.+.+.+."
-//             userInput:  ""
-//             expected:   "HIJK"
-//             actual:     "HIJK"
