@@ -1,78 +1,45 @@
-﻿// The `Brainf**k` works like a Turing Machine, with a read/write head (pointer)
-// that manipulates a buffer. The 8 possible machine operations are:
-//     ">" "<" "+" "-" "." "," "[" "]"
-// Any other character is generally ignored by the interpreter.
-// Source: https://www.dcode.fr/brainfuck-language
-let operationMap =
-    [ ('>', "increment the pointer position (+1)")
-      ('<', "decrement the pointer position (-1)")
-      ('+', "increment the byte in the memory cell where the pointer is located")
-      ('-', "decrement the byte in the memory cell where the pointer is located")
-      ('.', "send the value of the pointed byte as output (treated as an ASCII value)")
-      (',', "insert an input byte (user input) in the memory cell where the pointer is located (ASCII value)")
-      ('[', "if the pointed byte is 0 then jump to instruction after the corresponding ]")
-      (']', "if the pointed byte is not 0 then jump to the instruction after the corresponding [") ]
-    |> Map.ofList
+﻿let inline wrapPointer size ptr = (ptr % size + size) % size
 
-let debugFrame (inputData: string) inputPointer =
-    let location = $"[%03d{inputPointer}..%03d{inputData.Length}]"
-    let key = inputData.[inputPointer]
-    let value = operationMap |> Map.tryFind key |> Option.defaultValue "Unknown"
-    eprintfn $"""[DEBUG] %s{location} %c{key}: %s{value}"""
+let inline wrapByte n = (n % 256 + 256) % 256 |> byte
 
-// Build bidirectional map: '[' positions -> ']' positions and vice versa
-// • jumps: map being built
-// • stack: list of unmatched `[` positions
-// • '[' don't know where to jump yet, so push position i to stack
-// • ']' pop stack to get matching `[` position
-// • '_' non-bracket: ignore, pass state through unchanged.
-let buildJumpTable (input: char[]) =
+let buildJumpTable (input: char[]) = // Build bidirectional map: '[' positions -> ']' positions and vice versa
     input
     |> Array.indexed
     |> Array.fold
-        (fun (jumps, stack) (i, c) ->
-            match c with
-            | '[' -> (jumps, i :: stack)
-            | ']' ->
+        (fun (jumps, stack) (i, c) -> // jumps: map being built
+            match c with // stack: list of unmatched `[` positions
+            | '[' -> (jumps, i :: stack) // Don't know where to jump yet, so push position i to stack
+            | ']' -> // Pop stack to get matching `[` position
                 match stack with
                 | openPos :: rest -> (jumps |> Map.add openPos i |> Map.add i openPos, rest)
                 | [] -> (jumps, stack)
             | _ -> (jumps, stack))
-        (Map.empty, []) // initial state
+        (Map.empty, []) // Initial state
     |> fst
 
 let interpret (inputData: string) (userInput: string) =
-    let memorySize = 30_000
-    let memory = Array.zeroCreate<byte> memorySize // BF memory (30_000 cells)
-    let mutable pointer = 0 // memory pointer
+    let memSize = 30_000
+    let mem = memSize |> Array.zeroCreate<byte> // BF memory (30_000 cells)
+    let mutable memPointer = 0 // memory pointer
     let mutable inputPointer = 0
     let mutable userInputPointer = 0
     let output = System.Text.StringBuilder()
-
-    let jumpTable = inputData.ToCharArray() |> buildJumpTable
     let inputDataLength = inputData.Length
     let userInputLength = userInput.Length
-    let debug = false
-
-    if debug then
-        printfn $"[DEBUG] jumpTable=%A{jumpTable}"
+    let jumpTable = inputData.ToCharArray() |> buildJumpTable
 
     while inputPointer < inputDataLength do
-        if debug then
-            inputPointer |> debugFrame inputData
-
         match inputData.[inputPointer] with
-        | '>' -> pointer <- (pointer + 1) % memorySize
-        | '<' -> pointer <- (pointer - 1 + memorySize) % memorySize
-        | '+' -> memory.[pointer] <- (int memory.[pointer] + 1) % 256 |> byte
-        | '-' -> memory.[pointer] <- (int memory.[pointer] - 1 + 256) % 256 |> byte
-        | '.' -> output.Append(memory.[pointer] |> char) |> ignore
-        | ',' -> // WARNING: this branch is untested
-            if userInputPointer < userInputLength then
-                memory.[pointer] <- userInput.[userInputPointer] |> byte
-                userInputPointer <- userInputPointer + 1
-        | '[' when memory.[pointer] = 0uy -> inputPointer <- jumpTable.[inputPointer]
-        | ']' when memory.[pointer] <> 0uy -> inputPointer <- jumpTable.[inputPointer]
+        | '>' -> memPointer <- (memPointer + 1) |> wrapPointer memSize
+        | '<' -> memPointer <- (memPointer - 1) |> wrapPointer memSize
+        | '+' -> mem.[memPointer] <- (int mem.[memPointer] + 1) |> wrapByte
+        | '-' -> mem.[memPointer] <- (int mem.[memPointer] - 1) |> wrapByte
+        | '.' -> output.Append(mem.[memPointer] |> char) |> ignore
+        | ',' when userInputPointer < userInputLength ->
+            mem.[memPointer] <- userInput.[userInputPointer] |> byte
+            userInputPointer <- userInputPointer + 1
+        | '[' when mem.[memPointer] = 0uy -> inputPointer <- jumpTable.[inputPointer]
+        | ']' when mem.[memPointer] <> 0uy -> inputPointer <- jumpTable.[inputPointer]
         | _ -> () // ignore non-BF characters
 
         inputPointer <- inputPointer + 1
