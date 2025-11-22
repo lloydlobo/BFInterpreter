@@ -29,20 +29,23 @@ let charToOperation =
     | ']' -> Operation.JumpBackward
     | _ -> failwith "Invalid BF operation"
 
-let buildJumpTable (input: char[]) =
-    input // build bidirectional map: '[' positions -> ']' positions and vice versa
+let buildJumpMap (input: char[]) =
+    input
     |> Array.indexed
     |> Array.fold
-        (fun (jumps, stack) (i, c) -> // jumps: map being built
-            match c with // stack: list of unmatched `[` positions
-            | '[' -> (jumps, i :: stack) // don't know where to jump yet, so push position i to stack
-            | ']' -> // pop stack to get matching `[` position
+        (fun (jumps, stack) (i, c) ->
+            match c with
+            | '[' -> (jumps, i :: stack)
+            | ']' ->
                 match stack with
                 | openPos :: rest -> (jumps |> Map.add openPos i |> Map.add i openPos, rest)
                 | [] -> (jumps, stack)
             | _ -> (jumps, stack))
-        (Map.empty, []) // Initial state
+        (Map.empty, [])
     |> fst
+
+let inline wrapPointer size ptr = (ptr % size + size) % size
+let inline wrapByte n = (n % 256 + 256) % 256 |> byte
 
 let interpret (inputData: string) (userInput: string) =
     let memorySize = 30_000
