@@ -1,6 +1,33 @@
-﻿let inline wrapPointer size ptr = (ptr % size + size) % size
+﻿/// Represents the possible `Brainf**k` operations.
+type Operation =
+    /// `'>'`: Increment the memory pointer (move to the next cell).
+    | IncrementPointer
+    /// `'<'`: Decrement the memory pointer (move to the previous cell).
+    | DecrementPointer
+    /// `'+'`: Increment the byte at the memory cell currently pointed to.
+    | IncrementByte
+    /// `'-'`: Decrement the byte at the memory cell currently pointed to.
+    | DecrementByte
+    /// `'.'`: Output the value at the memory cell currently pointed to as an ASCII character.
+    | OutputByte
+    /// `','`: Accept a single byte of user input and store it at the memory cell currently pointed to (ASCII value).
+    | InputByte
+    /// `'['`: Jump forward to the corresponding `]` if the current memory cell is zero.
+    | JumpForward
+    /// `']'`: Jump backward to the corresponding `[` if the current memory cell is non-zero.
+    | JumpBackward
 
-let inline wrapByte n = (n % 256 + 256) % 256 |> byte
+let charToOperation =
+    function
+    | '>' -> Operation.IncrementPointer
+    | '<' -> Operation.DecrementPointer
+    | '+' -> Operation.IncrementByte
+    | '-' -> Operation.DecrementByte
+    | '.' -> Operation.OutputByte
+    | ',' -> Operation.InputByte
+    | '[' -> Operation.JumpForward
+    | ']' -> Operation.JumpBackward
+    | _ -> failwith "Invalid BF operation"
 
 let buildJumpTable (input: char[]) =
     input // build bidirectional map: '[' positions -> ']' positions and vice versa
@@ -18,29 +45,28 @@ let buildJumpTable (input: char[]) =
     |> fst
 
 let interpret (inputData: string) (userInput: string) =
-    let memSize = 30_000
-    let mem = memSize |> Array.zeroCreate<byte> // BF memory (30_000 cells)
-    let mutable memPointer = 0 // memory pointer
+    let memorySize = 30_000
+    let memory = memorySize |> Array.zeroCreate<byte> // BF memory (30_000 cells)
+    let mutable pointer = 0 // memory pointer
     let mutable inputPointer = 0
     let mutable userInputPointer = 0
     let output = System.Text.StringBuilder()
-    let inputDataLength = inputData.Length
-    let userInputLength = userInput.Length
-    let jumpTable = inputData.ToCharArray() |> buildJumpTable
 
-    while inputPointer < inputDataLength do
-        match inputData.[inputPointer] with
-        | '>' -> memPointer <- (memPointer + 1) |> wrapPointer memSize
-        | '<' -> memPointer <- (memPointer - 1) |> wrapPointer memSize
-        | '+' -> mem.[memPointer] <- (int mem.[memPointer] + 1) |> wrapByte
-        | '-' -> mem.[memPointer] <- (int mem.[memPointer] - 1) |> wrapByte
-        | '.' -> output.Append(mem.[memPointer] |> char) |> ignore
-        | ',' when userInputPointer < userInputLength ->
-            mem.[memPointer] <- userInput.[userInputPointer] |> byte
+    let jumpTable = inputData.ToCharArray() |> buildJumpMap
+
+    while inputPointer < inputData.Length do
+        match inputData.[inputPointer] |> charToOperation with
+        | IncrementPointer -> pointer <- (pointer + 1) |> wrapPointer memorySize
+        | DecrementPointer -> pointer <- (pointer - 1) |> wrapPointer memorySize
+        | IncrementByte -> memory.[pointer] <- (int memory.[pointer] + 1) |> wrapByte
+        | DecrementByte -> memory.[pointer] <- (int memory.[pointer] - 1) |> wrapByte
+        | OutputByte -> output.Append(memory.[pointer] |> char) |> ignore
+        | InputByte when userInputPointer < userInput.Length ->
+            memory.[pointer] <- userInput.[userInputPointer] |> byte
             userInputPointer <- userInputPointer + 1
-        | '[' when mem.[memPointer] = 0uy -> inputPointer <- jumpTable.[inputPointer]
-        | ']' when mem.[memPointer] <> 0uy -> inputPointer <- jumpTable.[inputPointer]
-        | _ -> () // ignore non-BF characters
+        | JumpForward when memory.[pointer] = 0uy -> inputPointer <- jumpTable.[inputPointer]
+        | JumpBackward when memory.[pointer] <> 0uy -> inputPointer <- jumpTable.[inputPointer]
+        | _ -> ()
 
         inputPointer <- inputPointer + 1
 
