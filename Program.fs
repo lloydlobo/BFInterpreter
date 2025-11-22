@@ -1,4 +1,4 @@
-﻿/// Represents the possible `Brainf**k` operations.
+/// Represents the possible `Brainf**k` operations.
 type Operation =
     /// `'>'`: Increment the memory pointer (move to the next cell).
     | IncrementPointer
@@ -39,74 +39,101 @@ let buildJumpMap (input: char[]) =
             | ']' ->
                 match stack with
                 | openPos :: rest -> (jumps |> Map.add openPos i |> Map.add i openPos, rest)
-                | [] -> (jumps, stack)
+                | [] -> failwith "Unmatched closing bracket `]`." // (jumps, stack)
             | _ -> (jumps, stack))
         (Map.empty, [])
     |> fst
 
 let inline wrapPointer size ptr = (ptr % size + size) % size
+
 let inline wrapByte n = (n % 256 + 256) % 256 |> byte
 
-let interpret (inputData: string) (userInput: string) =
-    let memorySize = 30_000
-    let memory = memorySize |> Array.zeroCreate<byte> // BF memory (30_000 cells)
-    let mutable pointer = 0 // memory pointer
-    let mutable inputPointer = 0
-    let mutable userInputPointer = 0
-    let output = System.Text.StringBuilder()
+type State =
+    { Memory: byte[] //~
+      Pointer: int
+      InputPointer: int
+      UserInputPointer: int
+      Output: char list }
+
+let interpret memorySize (inputData: string) (userInput: string) =
+    inputData
+    |> Seq.iter (fun c ->
+        if "><+-.,[]".IndexOf(c) = -1 then
+            failwith "Invalid character in BF source")
 
     let jumpTable = inputData.ToCharArray() |> buildJumpMap
 
-    while inputPointer < inputData.Length do
-        match inputData.[inputPointer] |> charToOperation with
-        | IncrementPointer -> pointer <- (pointer + 1) |> wrapPointer memorySize
-        | DecrementPointer -> pointer <- (pointer - 1) |> wrapPointer memorySize
-        | IncrementByte -> memory.[pointer] <- (int memory.[pointer] + 1) |> wrapByte
-        | DecrementByte -> memory.[pointer] <- (int memory.[pointer] - 1) |> wrapByte
-        | OutputByte -> output.Append(memory.[pointer] |> char) |> ignore
-        | InputByte when userInputPointer < userInput.Length ->
-            memory.[pointer] <- userInput.[userInputPointer] |> byte
-            userInputPointer <- userInputPointer + 1
-        | JumpForward when memory.[pointer] = 0uy -> inputPointer <- jumpTable.[inputPointer]
-        | JumpBackward when memory.[pointer] <> 0uy -> inputPointer <- jumpTable.[inputPointer]
-        | _ -> ()
+    let rec loop (state: State) =
+        if state.InputPointer >= inputData.Length then
+            state.Output |> List.rev |> Array.ofList |> System.String
+        else
+            let nextState =
+                match (inputData.[state.InputPointer] |> charToOperation) with
+                | IncrementPointer -> { state with Pointer = (state.Pointer + 1) |> wrapPointer memorySize }
+                | DecrementPointer -> { state with Pointer = (state.Pointer - 1) |> wrapPointer memorySize }
+                | IncrementByte ->
+                    state.Memory.[state.Pointer] <- (int state.Memory.[state.Pointer] + 1) |> wrapByte
+                    state
+                | DecrementByte ->
+                    state.Memory.[state.Pointer] <- (int state.Memory.[state.Pointer] - 1) |> wrapByte
+                    state
+                | OutputByte -> { state with Output = char state.Memory.[state.Pointer] :: state.Output }
+                | InputByte when state.UserInputPointer < userInput.Length ->
+                    state.Memory.[state.Pointer] <- userInput.[state.UserInputPointer] |> byte
+                    { state with UserInputPointer = state.UserInputPointer + 1 }
+                | JumpForward when state.Memory.[state.Pointer] = 0uy ->
+                    { state with InputPointer = jumpTable.[state.InputPointer] }
+                | JumpBackward when state.Memory.[state.Pointer] <> 0uy ->
+                    { state with InputPointer = jumpTable.[state.InputPointer] }
+                | _ -> state
 
-        inputPointer <- inputPointer + 1
+            loop { nextState with InputPointer = nextState.InputPointer + 1 } // tail-recursive call
 
-    output.ToString()
+    loop { Memory = memorySize |> Array.zeroCreate; Pointer = 0; InputPointer = 0; UserInputPointer = 0; Output = [] }
 
-[<EntryPoint>]
-let main _argv =
+let testCases =
     seq {
-        ("++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.",
-         "",
-         "Hello World!\n")
-
         ("-[--->+<]>-.[---->+++++<]>-.+.++++++++++.+[---->+<]>+++.-[--->++<]>-.++++++++++.+[---->+<]>+++.[-->+++++++<]>.++.-------------.[--->+<]>---..+++++.-[---->+<]>++.+[->+++<]>.++++++++++++..---.[-->+<]>--------.",
          "",
          "This is pretty cool.") // source: https://copy.sh/brainfuck/text.html
+
+        ("++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.",
+         "",
+         "Hello World!\n")
 
         (",.", "A", "A") // echo input: read char and output it
         (",>,.<.", "AB", "BA") // reverse two chars
         (",>,[<+>-]<.", "12", "c") // add '1' (49) + '2' (50) = 99 = 'c'
         (",>,[<+>-]<++++++++++++++++++++++++++++++++++++++++++++++++.", "\u0005\u0005", ":") // add 5 + 5 = 10, then add 48 to get '10' → ':' (ASCII 58)
         (",>,[<+>-]<.", "A ", "a") // add 'A' (65) + space (32) = 97 = 'a'
-        ("+++++++++[>++++++++++<-]>--.", "", "X") // FIXME: simple loop: output 'X' five times (just outputs once)
+
+        ("+++++++++[>++++++++++<-]>--.", "", "X") // output 'X' once
+        ("+++++++++[>++++++++++<-]>--.....", "", "XXXXX") // output 'X' five times
         ("+++++++++[>++++++++<-]>.+.+.+.", "", "HIJK") // output multiple chars
     }
-    |> Seq.iteri (fun i (inputData, userInput, expected) ->
-        let actual = interpret inputData userInput
-        let pass = if expected = actual then "✓" else "✗"
 
-        if expected <> actual then
+[<EntryPoint>]
+let main _argv =
+    testCases
+    |> Seq.iteri (fun i (inputData, userInput, expected) ->
+        let sw = System.Diagnostics.Stopwatch.StartNew()
+
+        try
+            let memorySize = 30_000
+            let actual = interpret memorySize inputData userInput
+            sw.Stop()
+
+            let elapsed = sw.Elapsed.TotalMilliseconds
+            let ratio = float inputData.Length / float actual.Length
+            let pass = expected = actual
+
             printfn
-                $"""Test %d{i + 1}: {pass}
-                inputData:  %A{inputData}
-                userInput:  %A{userInput}
-                expected:   %A{expected}
-                actual:     %A{actual}
-                """
-        else
-            printfn $"""Test %d{i + 1}: {pass}""")
+                $"""Test #%03d{i + 1}: {if pass then "✓" else "✗"} ({elapsed}ms, {actual.Length}b, ratio {ratio})"""
+
+            if not pass then
+                eprintfn $"  %A{inputData} | %A{userInput} | expected: %A{expected} | actual: %A{actual}"
+        with ex ->
+            eprintfn $"Test #%03d{i + 1}: ✗ (Error: %A{ex.Message})" //~
+    )
 
     0
