@@ -17,8 +17,8 @@ fsharp_max_function_binding_width = 120
 fsharp_max_infix_operator_expression = 120 # 80
 fsharp_max_record_width = 120
 fsharp_max_value_binding_width = 120
-# fsharp_multiline_bracket_style = stroustrup
-max_line_length = 120
+fsharp_multiline_bracket_style = stroustrup
+max_line_length = 160
 
 # Specific settings for "View/HTML" related files
 # It makes the code more consistent in term of spacing and indentation
