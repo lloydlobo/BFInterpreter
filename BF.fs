@@ -1,5 +1,7 @@
 module BFInterpreter.BF
 
+open System
+
 type State = { //~
     Memory: byte[]
     Pointer: int
@@ -61,33 +63,41 @@ let inline wrapPointer size ptr = (ptr % size + size) % size // (cyclic memory)
 let inline wrapByte n = (n % 256 + 256) % 256 |> byte // (0..255)
 
 let Interpret memorySize (inputData: string) (userInput: string) =
-    let operations = inputData |> Seq.choose charToOperation |> Array.ofSeq
-
-    if operations.Length <> inputData.Length then
-        failwith "Invalid character in BF source"
+    let operations =
+        inputData
+        |> Seq.mapi (fun i c ->
+            match c |> charToOperation with
+            | Some op -> op
+            | None -> failwith $"Invalid character at {i}: {c}")
+        |> Array.ofSeq
 
     let jumpTable = inputData.ToCharArray() |> buildJumpMap
 
-    let mutateCell ptr delta (memory: byte[]) = // “mutate cell at ptr by delta in memory”
-        memory.[ptr] <- (int memory.[ptr] + delta) |> wrapByte
-
     let rec loop (state: State) =
+        let output () = Console.Write(char (state.Memory.[state.Pointer])) // TODO: Implement or remove
+
+        let input () = state.Memory.[state.Pointer] <- int (Console.ReadKey(true).KeyChar) |> byte // TODO: if using interactive user input, then remove userInput param
+
         if state.InputPointer >= inputData.Length then
-            state.Output |> List.rev |> Array.ofList |> System.String
+            state.Output |> List.rev |> Array.ofList |> String
         else
             let nextState =
                 match operations.[state.InputPointer] with
                 | IncrementPointer -> { state with Pointer = (state.Pointer + 1) |> wrapPointer memorySize }
                 | DecrementPointer -> { state with Pointer = (state.Pointer - 1) |> wrapPointer memorySize }
                 | IncrementByte ->
-                    state.Memory |> mutateCell state.Pointer 1 |> ignore
+                    state.Memory.[state.Pointer] <- (int state.Memory.[state.Pointer] + 1) |> wrapByte
                     state
                 | DecrementByte ->
-                    state.Memory |> mutateCell state.Pointer -1 |> ignore
+                    state.Memory.[state.Pointer] <- (int state.Memory.[state.Pointer] - 1) |> wrapByte
                     state
                 | OutputByte -> { state with Output = char state.Memory.[state.Pointer] :: state.Output }
-                | InputByte when state.UserInputPointer < userInput.Length ->
-                    state.Memory.[state.Pointer] <- userInput.[state.UserInputPointer] |> byte
+                | InputByte ->
+                    state.Memory.[state.Pointer] <-
+                        match state.UserInputPointer < userInput.Length with
+                        | true -> userInput.[state.UserInputPointer] |> byte
+                        | _ -> 0uy
+
                     { state with UserInputPointer = state.UserInputPointer + 1 }
                 | JumpForward when state.Memory.[state.Pointer] = 0uy -> { state with InputPointer = jumpTable.[state.InputPointer] }
                 | JumpBackward when state.Memory.[state.Pointer] <> 0uy -> { state with InputPointer = jumpTable.[state.InputPointer] }
@@ -95,10 +105,4 @@ let Interpret memorySize (inputData: string) (userInput: string) =
 
             loop { nextState with InputPointer = nextState.InputPointer + 1 } // tail-recursive call
 
-    loop {
-        Memory = memorySize |> Array.zeroCreate //~
-        Pointer = 0
-        InputPointer = 0
-        UserInputPointer = 0
-        Output = []
-    }
+    loop { Memory = memorySize |> Array.zeroCreate; Pointer = 0; InputPointer = 0; UserInputPointer = 0; Output = [] }

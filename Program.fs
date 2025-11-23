@@ -1,4 +1,5 @@
 open BFInterpreter.BF
+open BFInterpreter.REPL
 
 let testCases =
     seq {
@@ -6,7 +7,9 @@ let testCases =
          "",
          "This is pretty cool.") // source: https://copy.sh/brainfuck/text.html
 
-        ("++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.", "", "Hello World!\n")
+        ("++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.",
+         "",
+         "Hello World!\n")
 
         (",.", "A", "A") // echo input: read char and output it
         (",>,.<.", "AB", "BA") // reverse two chars
@@ -19,8 +22,7 @@ let testCases =
         ("+++++++++[>++++++++<-]>.+.+.+.", "", "HIJK") // output multiple chars
     }
 
-[<EntryPoint>]
-let main _argv =
+let runTests =
     testCases
     |> Seq.iteri (fun i (inputData, userInput, expected) ->
         let sw = System.Diagnostics.Stopwatch.StartNew()
@@ -29,17 +31,20 @@ let main _argv =
             let memorySize = 30_000
             let actual = Interpret memorySize inputData userInput
             sw.Stop()
-
             let elapsed = sw.Elapsed.TotalMilliseconds
             let ratio = float inputData.Length / float actual.Length
             let pass = expected = actual
 
-            printfn $"""Test #%03d{i + 1}: {if pass then "✓" else "✗"} ({elapsed}ms, {actual.Length}b, ratio {ratio})"""
+            printfn
+                $"""Test #%03d{i + 1}: {if pass then "✓" else "✗"} ({elapsed}ms, {actual.Length}b, ratio {ratio})"""
 
             if not pass then
-                eprintfn $"  %A{inputData} | %A{userInput} | expected: %A{expected} | actual: %A{actual}"
-
+                eprintfn
+                    $"  %A{inputData} | %A{userInput} | expected: %A{expected} | actual: %A{actual}"
         with ex ->
             eprintfn $"Test #%03d{i + 1}: ✗ (Error: %A{ex.Message})")
 
+[<EntryPoint>]
+let main _argv =
+    RunREPL()
     0
