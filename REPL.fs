@@ -35,7 +35,7 @@ let rec RunREPL () =
         let memorySize = 30_000
         let userInput = "" // You can modify this to read user input for ',' (Brainfuck input)
         let output = Interpret memorySize input userInput
-        printfn $"{output}\n"
+        Console.WriteLine($"{output}\n")
 
     let mutable running = true
 
