@@ -24,7 +24,7 @@ let helpMessage =
     """
 
 // Read-eval-print loop (See: https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop)
-let rec RunREPL () =
+let RunREPL () =
     Console.WriteLine()
     Console.WriteLine("""Brainfuck REPL""")
     Console.WriteLine()
@@ -43,10 +43,16 @@ let rec RunREPL () =
         Console.Write("> ")
         let input = Console.ReadLine()
 
-        match input.ToLower() with
-        | "quit" ->
-            printfn "Exiting REPL."
+        if input |> isNull then
+            printfn "No input available. Exiting"
             running <- false
-        | "clear" -> Console.Clear()
-        | "help" -> printfn $"{helpMessage}"
-        | _ -> input |> handleProgram
+        else
+            match input.ToLower() with
+            | "quit" ->
+                printfn "Exiting REPL."
+                running <- false
+            | "clear" -> Console.Clear()
+            | "help" -> printfn $"{helpMessage}"
+            | _ -> input |> handleProgram
+
+    0
