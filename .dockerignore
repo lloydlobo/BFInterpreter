@@ -1,0 +1,8 @@
+bin/
+obj/
+.git/
+*.md
+*.gif
+*.tape
+*.bak
+.idea/
