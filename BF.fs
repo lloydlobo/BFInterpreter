@@ -63,6 +63,8 @@ type State = { //~
 }
 
 let Interpret memorySize (inputData: string) (userInput: string) =
+    assert (memorySize > 0)
+
     let operations =
         inputData
         |> Seq.mapi (fun i c ->
@@ -74,8 +76,11 @@ let Interpret memorySize (inputData: string) (userInput: string) =
     let jumpTable = inputData.ToCharArray() |> buildJumpMap
 
     let rec loop (state: State) =
-        let output () = Console.Write(char (state.Memory.[state.Pointer])) // TODO: Implement or remove
+        assert (state.Pointer >= 0)
+        assert (state.InputPointer >= 0)
+        assert (state.UserInputPointer >= 0)
 
+        let output () = Console.Write(char (state.Memory.[state.Pointer])) // TODO: Implement or remove
         let input () = state.Memory.[state.Pointer] <- int (Console.ReadKey(true).KeyChar) |> byte // TODO: if using interactive user input, then remove userInput param
 
         if state.InputPointer >= inputData.Length then

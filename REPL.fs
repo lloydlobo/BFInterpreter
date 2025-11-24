@@ -11,16 +11,26 @@ let helpMessage =
     help                                          // Display help
     quit                                          // Exit
 
-  Brainfuck operations:
+  Operations:
 
-    '>' : Move the memory pointer to the next cell.
-    '<' : Move the memory pointer to the previous cell.
-    '+' : Increment the value at the current memory cell.
-    '-' : Decrement the value at the current memory cell.
-    '.' : Output the current memory cell as an ASCII character.
-    ',' : Read a single byte of input into the current memory cell.
-    '[' : Jump forward to the matching ']' if the current cell is zero.
-    ']' : Jump backward to the matching '[' if the current cell is non-zero.
+    >                                             // Move right
+    <                                             // Move left
+    +                                             // Increment
+    -                                             // Decrement
+    .                                             // Output character
+    ,                                             // Input character
+    [                                             // Jump forward if zero
+    ]                                             // Jump backward if not zero
+
+  Examples:
+
+    +++++++++[>++++++++++<-]>--.                  // X
+    +++++++++[>++++++++++<-]>--.....              // XXXXX
+    +++++++++[>++++++++<-]>.+.+.+.                // HJKL
+
+    >+++++++[<++++++++>-]<++.                     // :
+    >++++++++[<++++++++>-]<+.                     // A
+    >++++++++++[<++++++++++>-]<+++++.             // i
     """
 
 // Read-eval-print loop (See: https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop)
@@ -44,7 +54,7 @@ let RunREPL () =
         let input = Console.ReadLine()
 
         if input |> isNull then
-            printfn "No input available. Exiting"
+            eprintfn "No input available. Exiting"
             running <- false
         else
             match input.ToLower() with
