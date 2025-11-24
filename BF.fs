@@ -2,14 +2,6 @@ module BFInterpreter.BF
 
 open System
 
-type State = { //~
-    Memory: byte[]
-    Pointer: int
-    InputPointer: int
-    UserInputPointer: int
-    Output: char list
-}
-
 /// Represents the possible Brainf**k operations.
 /// Source: https://www.dcode.fr/brainfuck-language
 type Operation =
@@ -43,7 +35,7 @@ let charToOperation =
     | ']' -> Some Operation.JumpBackward
     | _ -> None
 
-let buildJumpMap (input: char[]) =
+let inline buildJumpMap (input: char[]) =
     input
     |> Array.indexed
     |> Array.fold
@@ -61,6 +53,14 @@ let buildJumpMap (input: char[]) =
 let inline wrapPointer size ptr = (ptr % size + size) % size // (cyclic memory)
 
 let inline wrapByte n = (n % 256 + 256) % 256 |> byte // (0..255)
+
+type State = { //~
+    Memory: byte[]
+    Pointer: int
+    InputPointer: int
+    UserInputPointer: int
+    Output: char list
+}
 
 let Interpret memorySize (inputData: string) (userInput: string) =
     let operations =
