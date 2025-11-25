@@ -12,11 +12,11 @@ indent_size = 4
 trim_trailing_whitespace = true
 
 [*.fs]
-fsharp_max_array_or_list_width = 120
-fsharp_max_function_binding_width = 120
-fsharp_max_infix_operator_expression = 120 # 80
-fsharp_max_record_width = 120
-fsharp_max_value_binding_width = 120
+fsharp_max_array_or_list_width = 160
+fsharp_max_function_binding_width = 160
+fsharp_max_infix_operator_expression = 160 # 80
+fsharp_max_record_width = 160
+fsharp_max_value_binding_width = 160
 fsharp_multiline_bracket_style = stroustrup
 max_line_length = 160
 

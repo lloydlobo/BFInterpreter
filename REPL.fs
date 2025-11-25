@@ -54,7 +54,7 @@ let RunREPL () =
         let input = Console.ReadLine()
 
         if input |> isNull then
-            eprintfn "No input available. Exiting"
+            eprintfn "No input available. Exiting" // NOTE: gets triggered on Ctrl-d
             running <- false
         else
             match input.ToLower() with

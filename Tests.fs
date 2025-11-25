@@ -97,14 +97,26 @@ let buildJumpMapUnitTests =
         <| fun _ ->
             let program = [| '['; '['; '>'; '>'; ']'; '<'; ']' |]
             let expected = Map.ofList [ (0, 6); (6, 0); (1, 4); (4, 1) ]
-            let result = buildJumpMap program
+
+            let operations =
+                match program |> tryParseProgram with
+                | Error parseError -> failwith $"{parseError}"
+                | Ok ops -> ops
+
+            let result = operations |> buildJumpMapFromOperations
             Expect.equal result expected "The jump map should correctly match the brackets."
 
         testCase "Test empty input"
         <| fun _ ->
             let program = [| '.'; '>' |] // No brackets
             let expected = Map.empty
-            let result = buildJumpMap program
+
+            let operations =
+                match program |> tryParseProgram with
+                | Error parseError -> failwith $"{parseError}"
+                | Ok ops -> ops
+
+            let result = operations |> buildJumpMapFromOperations
             Expect.equal result expected "The jump map should be empty for input without brackets."
     ]
 

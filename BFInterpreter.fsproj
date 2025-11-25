@@ -5,16 +5,9 @@
         <TargetFramework>net10.0</TargetFramework>
         <GenerateProgramFile>false</GenerateProgramFile>
         <Description>A Brainfuck interpreter written in F#</Description>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
     </PropertyGroup>
-
-    <PropertyGroup>
-      <GenerateDocumentationFile>true</GenerateDocumentationFile>
-      <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
-    </PropertyGroup>
-
-    <Target Name="RunTests" BeforeTargets="Build">
-      <Exec Command="dotnet test --no-build" ContinueOnError="false" />
-    </Target>
 
     <ItemGroup>
         <Compile Include="BF.fs"/>
