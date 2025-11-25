@@ -62,9 +62,7 @@ Require echo
 Set Shell "bash"
 Set FontSize 18
 Set Width 1200
-Set Height 600
-
-# Type "echo 'Testing BF!'" Sleep 500ms  Enter
+Set Height 800
 
 Type "dotnet test" Sleep 500ms  Enter
 

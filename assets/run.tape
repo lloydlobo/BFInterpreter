@@ -60,17 +60,20 @@ Output run.gif
 Require echo
 
 Set Shell "bash"
-Set FontSize 16
+Set FontSize 18
 Set Width 1200
-Set Height 600
+Set Height 800
 
 Type "dotnet run" Sleep 500ms  Enter
 Sleep 3s
 
-Type "+++++++++[>++++++++<-]>.+.+.+." Sleep 2s  Enter
+Type "+++++++++[>++++++++<-]>.+.+.+." Sleep 500ms  Enter
+Sleep 2s
+
+Type "clear" Sleep 500ms  Enter
 Sleep 1s
 
-Type "help" Sleep 1s  Enter
+Type "help" Sleep 500ms  Enter
 Sleep 1s
 
 Type "quit" Sleep 2s  Enter

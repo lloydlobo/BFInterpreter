@@ -1,17 +1,20 @@
 open BFInterpreter.BF
 open BFInterpreter.REPL
-open Expecto.CSharp
 
 [<EntryPoint>]
 let main args =
+    let memorySize = 30_000
+
     match args with
-    | [||] -> RunREPL() // interacitve mode
-    | [| bfCode |] ->
-        let memorySize = 30_000
-        let userInput = ""
-        let output = Interpret memorySize bfCode userInput
+    | [||] -> RunREPL()
+    | [| inputData |] ->
+        let output = Interpret memorySize inputData ""
+        printfn $"{output}"
+        0
+    | [| inputData; userInput |] ->
+        let output = Interpret memorySize inputData userInput
         printfn $"{output}"
         0
     | _ ->
-        printfn "Usage: bfinterpreter [bf-code]"
+        printfn "Usage: bfinterpreter [inputData] [userInput]"
         1
