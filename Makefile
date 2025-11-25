@@ -22,3 +22,7 @@ docker-build:
 
 docker-run:
 	docker run -it bfinterpreter:latest
+
+vhs:
+	vhs assets/run.tape --output assets/run.gif
+	vhs assets/test.tape --output assets/test.gif
