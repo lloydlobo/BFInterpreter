@@ -18,21 +18,21 @@ type InterpreterError =
 /// Represents the possible Brainf**k operations.
 /// Source: https://www.dcode.fr/brainfuck-language
 type Operation =
-    /// '>' : Move the memory pointer to the next cell.
+    /// `>` - Move the memory pointer to the next cell.
     | IncrementPointer
-    /// '<' : Move the memory pointer to the previous cell.
+    /// `<` - Move the memory pointer to the previous cell.
     | DecrementPointer
-    /// '+' : Increment the value at the current memory cell.
+    /// `+` - Increment the value at the current memory cell.
     | IncrementByte
-    /// '-' : Decrement the value at the current memory cell.
+    /// `-` - Decrement the value at the current memory cell.
     | DecrementByte
-    /// '.' : Output the current memory cell as an ASCII character.
+    /// `.` - Output the current memory cell as an ASCII character.
     | OutputByte
-    /// ',' : Read a single byte of input into the current memory cell.
+    /// `,` - Read a single byte of input into the current memory cell.
     | InputByte
-    /// '[' : Jump forward to the matching ']' if the current cell is zero.
+    /// `[` - Jump forward to the matching `]` if the current cell is zero.
     | JumpForward
-    /// ']' : Jump backward to the matching '[' if the current cell is non-zero.
+    /// `]` - Jump backward to the matching `[` if the current cell is non-zero.
     | JumpBackward
 
 /// Builds a jump table mapping '[' to ']' and vice versa.
@@ -52,8 +52,26 @@ module Constants =
     let MaxMemorySize = 1_048_576 // 1MB max
     let DefaultMemorySize = 30_000
 
-// TODO: Performance note: Jump table uses Map instead of array for O(1) access
 let inline buildJumpMapFromOperations (operations: Operation[]) =
+    let jumpTable = -1 |> Array.create operations.Length // O(1) access
+    let stack = System.Collections.Generic.Stack<int>()
+
+    operations
+    |> Array.iteri (fun i op ->
+        match op with
+        | Operation.JumpForward -> i |> stack.Push
+        | Operation.JumpBackward ->
+            let openPos = stack.Pop()
+            jumpTable.[openPos] <- i
+            jumpTable.[i] <- openPos
+        | _ -> ()) // non-bracket positions remain -1
+
+    assert (jumpTable.Length = operations.Length)
+    assert ((jumpTable |> Array.filter ((<) -1) |> Array.length) % 2 = 0) // ensure matched brackets
+
+    jumpTable
+
+let inline buildJumpMapFromOperations' (operations: Operation[]) =
     operations
     |> Array.indexed
     |> Array.fold
@@ -78,14 +96,6 @@ let constrainMemorySize =
     function
     | x when x <= 0 || x > Constants.MaxMemorySize -> Error(InvalidMemorySize x)
     | x -> Ok x
-
-type State = { //~
-    Memory: byte[] // Memory: System.Span<byte>
-    Pointer: int
-    InputPointer: int
-    UserInputPointer: int
-    OutputBuilder: System.Text.StringBuilder
-}
 
 let tryParseProgram inputData : Result<Operation array, ParseError> =
     let ops = ResizeArray()
@@ -113,6 +123,14 @@ let tryParseProgram inputData : Result<Operation array, ParseError> =
         | true -> Ok ops
         | false -> Error(UnbalancedBrackets bracketCount)
 
+type State = { //~
+    Memory: byte[] // Memory: System.Span<byte>
+    Pointer: int
+    InputPointer: int
+    UserInputPointer: int
+    OutputBuilder: System.Text.StringBuilder
+}
+
 let TryInterpret (memorySize: int) (inputData: string) (userInput: string) : Result<String, InterpreterError> =
     match memorySize |> constrainMemorySize with
     | Error x -> Error x
@@ -122,9 +140,8 @@ let TryInterpret (memorySize: int) (inputData: string) (userInput: string) : Res
         | Ok operations ->
             try
                 let jumpTable = operations |> buildJumpMapFromOperations
-                assert (jumpTable.Count % 2 = 0) // paired brackets
 
-                let rec loop (state: State) =
+                let rec loop state =
                     if state.InputPointer >= operations.Length then
                         assert (state.InputPointer = operations.Length)
                         Ok(state.OutputBuilder.ToString())
@@ -176,11 +193,8 @@ let Interpret memorySize inputData userInput =
                 | InvalidCharacters chars ->
                     chars |> List.map (fun (c, i) -> $"Invalid character '{c}' at position {i}. Only >, <, +, -, ., ,, [, ] are allowed.") |> String.concat "; "
                 | UnbalancedBrackets count -> $"Unbalanced brackets in program (net count: {count})"
+                | MismatchedBrackets(i, i1) -> failwith "todo"
             | InvalidMemorySize size -> $"Invalid memory size: {size}. Must be between 1 and {Constants.MaxMemorySize}"
             | RuntimeError msg -> $"Runtime error: {msg}"
 
         failwith errorMessage
-
-// 6. Performance Optimizations
-// - Pre-allocate output buffer with estimated size
-// - Consider jump table as array instead of Map for O(1) access

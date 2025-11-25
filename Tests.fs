@@ -96,7 +96,7 @@ let buildJumpMapUnitTests =
         testCase "Test simple matching brackets"
         <| fun _ ->
             let program = [| '['; '['; '>'; '>'; ']'; '<'; ']' |]
-            let expected = Map.ofList [ (0, 6); (6, 0); (1, 4); (4, 1) ]
+            let expected = [| 6; 4; -1; -1; 1; -1; 0 |]
 
             let operations =
                 match program |> tryParseProgram with
@@ -109,7 +109,7 @@ let buildJumpMapUnitTests =
         testCase "Test empty input"
         <| fun _ ->
             let program = [| '.'; '>' |] // No brackets
-            let expected = Map.empty
+            let expected = [| -1; -1 |]
 
             let operations =
                 match program |> tryParseProgram with
